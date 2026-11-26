@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>简要版 · 用 Agent 搭建专用工具（变电站航线台账信息更新）</title>
+<style>
+  :root{
+    --brand:#0f4c81; --brand2:#1a6fb5; --soft:#eaf2fa;
+    --ok:#0a7a3d; --okbg:#e8f6ee;
+    --warn:#a35b00; --warnbg:#fdf3e3;
+    --ink:#18212c; --ink2:#54626f; --line:#dde4ec; --bg:#f5f8fb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;font-size:16px;line-height:1.7}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px 60px}
+
+  /* 头部 */
+  header{background:linear-gradient(135deg,#0f4c81,#2790d6);color:#fff;padding:40px 0 34px;margin-bottom:26px}
+  header .wrap{padding-bottom:0}
+  .kicker{font-size:13px;letter-spacing:.16em;opacity:.85}
+  h1{margin:8px 0 10px;font-size:34px;line-height:1.25}
+  h1 small{display:block;font-size:17px;font-weight:400;opacity:.92;margin-top:10px}
+  .nums{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  .nums div{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
+    border-radius:12px;padding:10px 18px;text-align:center;min-width:120px}
+  .nums b{display:block;font-size:26px;line-height:1.2}
+  .nums span{font-size:12.5px;opacity:.9}
+
+  h2{font-size:22px;margin:34px 0 14px;display:flex;align-items:center;gap:10px}
+  h2 i{font-style:normal;width:28px;height:28px;border-radius:8px;background:var(--brand);color:#fff;
+    font-size:14px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  p{margin:8px 0}
+
+  /* 对比 */
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.vs{grid-template-columns:1fr}}
+  .vs .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .vs .box.bad{border-top:4px solid #c0392b}
+  .vs .box.good{border-top:4px solid var(--ok)}
+  .vs h3{margin:0 0 8px;font-size:17px}
+  .vs ul{margin:6px 0 0;padding-left:20px}
+  .vs li{margin:3px 0;font-size:15px}
+
+  /* 卡点 / 步骤卡片 */
+  .road{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:900px){.road{grid-template-columns:repeat(2,1fr)}}
+  .road .s{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative}
+  .road .s b{display:flex;align-items:center;gap:8px;font-size:15.5px;color:var(--brand)}
+  .road .s b i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--brand2);
+    color:#fff;font-size:12.5px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .road .s p{margin:6px 0 0;font-size:13.8px;color:var(--ink2)}
+  .road .s em{display:inline-block;margin-top:8px;font-style:normal;font-size:12px;
+    background:var(--soft);color:var(--brand);border-radius:10px;padding:1px 9px}
+
+  /* 五步用法 */
+  .use{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  @media(max-width:900px){.use{grid-template-columns:repeat(2,1fr)}}
+  .use .u{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 12px;text-align:center}
+  .use .u .n{width:34px;height:34px;margin:0 auto 8px;border-radius:50%;
+    background:var(--soft);color:var(--brand);font-weight:700;display:flex;align-items:center;justify-content:center}
+  .use .u b{display:block;font-size:15px}
+  .use .u span{font-size:13px;color:var(--ink2)}
+
+  .must{background:var(--warnbg);border-left:4px solid var(--warn);border-radius:10px;
+    padding:12px 16px;margin:14px 0;font-size:15px}
+  .must b{color:var(--warn)}
+
+  /* 红线 / 经验 */
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:900px){.cards{grid-template-columns:1fr}}
+  .cards .c{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .cards .c b{display:block;color:var(--brand);margin-bottom:4px}
+  .cards .c span{font-size:14.5px;color:var(--ink2)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+  .chips span{background:#fff;border:1px solid var(--line);border-radius:20px;padding:7px 15px;font-size:14.5px}
+  .chips span b{color:var(--brand2)}
+
+  table{width:100%;border-collapse:collapse;background:#fff;margin:12px 0;font-size:14.5px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--soft);color:var(--brand)}
+  code{font-family:"Consolas",monospace;background:#eef2f7;padding:1px 5px;border-radius:4px;font-size:13px;color:#0b3d63}
+  pre{background:#0f1c2b;color:#d8e5f1;padding:14px 16px;border-radius:10px;overflow-x:auto;
+    font-family:"Consolas",monospace;font-size:13px;line-height:1.7}
+  pre code{background:none;color:inherit;padding:0}
+
+  details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 16px;margin:10px 0}
+  details summary{cursor:pointer;font-weight:600;color:var(--brand);padding:13px 0;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸ ";color:var(--brand2)}
+  details[open] summary::before{content:"▾ "}
+  details .b{padding:0 0 14px;font-size:14.5px}
+
+  .ok{background:var(--okbg);border-left:4px solid var(--ok);border-radius:10px;padding:12px 16px;margin:14px 0;font-size:15px}
+  footer{border-top:1px solid var(--line);margin-top:36px;padding-top:16px;color:var(--ink2);font-size:14px}
+
+  @media print{
+    body{background:#fff;font-size:12.5px}
+    header{padding:20px 0;color:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    h2{page-break-after:avoid}
+    .road,.use,.cards,.vs{break-inside:avoid}
+    details{border-color:#bbb}
+    details[open] summary{color:var(--brand)}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">LiPowerline Agent · 培训案例（简要版 · 案例二）</div>
+    <h1>用 Agent 搭建专用工具
+      <small>变电站航线台账信息更新：从一句「对不上」，到一个双击就能用的工具</small>
+    </h1>
+    <div class="nums">
+      <div><b>10</b><span>走过的卡点</span></div>
+      <div><b>719/719</b><span>引用更新成功</span></div>
+      <div><b>0 / 62</b><span>异常（城南/都梁）</span></div>
+      <div><b>12 项</b><span>独立验收全过</span></div>
+      <div><b>1 个 exe</b><span>交付使用者</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2><i>1</i>为什么做它：手工 vs 工具</h2>
+  <div class="vs">
+    <div class="box bad">
+      <h3>手工方式</h3>
+      <ul>
+        <li>7 个航线 JSON、362 个部件点、<strong>722 处台账引用</strong>，全靠手改</li>
+        <li>同一设备名称在文件里存了<strong>三份</strong>，改一处漏两处</li>
+        <li>整体读写一遍就改坏格式（浮点、键序、空数组写法）</li>
+        <li>改完<strong>无法证明没改错</strong>；出错是静默的</li>
+      </ul>
+    </div>
+    <div class="box good">
+      <h3>现在的方式</h3>
+      <ul>
+        <li>填 4 个路径 → 预检（<strong>只出报告</strong>）→ 人工确认 → 正式执行</li>
+        <li>只改白名单字段，<strong>其他字节一字不差</strong></li>
+        <li>异常一律保持旧值 + 进清单，<strong>绝不替人挑</strong></li>
+        <li>自动出全套报告 + <strong>独立验收 12 项</strong>，与历史交付逐字节一致</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><i>2</i>一步一步做出来：十步，每步都有一道坎</h2>
+  <div class="road">
+    <div class="s"><b><i>1</i>明确边界</b><p><strong>坎：</strong>需求只有一句话，连改成什么样都没说。<br><strong>怎么说：</strong>先别动文件，把「要改 / 不许改 / 出错怎么办 / 怎么算完成」列成清单，我确认了再动手。</p><em>产出：需求清单 + 禁止清单</em></div>
+    <div class="s"><b><i>2</i>摸清数据</b><p><strong>坎：</strong>文件不敢碰，读写一遍格式就变。<br><strong>怎么说：</strong>先做实验：原样读进来写出去，逐字节比差异，不许改生产文件。</p><em>产出：数据结构清单；结论：只能文本级定点替换</em></div>
+    <div class="s"><b><i>3</i>确定规则</b><p><strong>坎：</strong>名称怎么拆、分区取第几段、一对多怎么办，没人说清。<br><strong>怎么说：</strong>能确定的和不能确定的分两栏，不确定的列成问题清单去问研发，不许自己定。</p><em>产出：规则 1–10 + 冲突清单</em></div>
+    <div class="s"><b><i>4</i>备料与参数</b><p><strong>坎：</strong>换个站就错——路径前缀段数不固定。<br><strong>怎么说：</strong>这个数不许写死，要么推断并给证据，要么直接停。</p><em>产出：映射表 + 参数文件；P 推断 556/556</em></div>
+    <div class="s"><b><i>5</i>写引擎跑通</b><p><strong>坎：</strong>差点整文件重排（空数组写法、17 位浮点全变）。<br><strong>怎么说：</strong>只在原字符串上换目标字段的值，不许重排文件、不许加新键。</p><em>产出：引擎 + 预检/正式四种模式</em></div>
+    <div class="s"><b><i>6</i>全量普查名称</b><p><strong>坎：</strong>以为改完 <code>partName</code> 就完事，其实名称存了三份。<br><strong>怎么说：</strong>把所有出现旧名称的位置全量普查一遍，一处不许漏，给完整清单。</p><em>产出：672 处名称副本同步</em></div>
+    <div class="s"><b><i>7</i>先跑预检</b><p><strong>坎：</strong>换站一跑 62 条异常，本能想「调成 0」。<br><strong>怎么说：</strong>不许为好看改数据，把 62 条按原因归类，说清每类该怎么办。</p><em>产出：预检报告 + 异常清单（缺行 2 / 一对多 17）</em></div>
+    <div class="s"><b><i>8</i>确认后执行</b><p><strong>坎：</strong>两个都叫「最新」的台账；输出目录还堆着旧文件。<br><strong>怎么说：</strong>哪个最新我不猜，把差异和后果列出来；输出目录必须是新的。</p><em>产出：7 个新航线 + 全套报告</em></div>
+    <div class="s"><b><i>9</i>独立验收</b><p><strong>坎：</strong>程序说「全部成功」，可改错是静默的。<br><strong>怎么说：</strong>再写一个不引用你结论的验收程序，从零重算一遍。</p><em>产出：12 项全过；与历史交付 7/7 逐字节一致</em></div>
+    <div class="s"><b><i>10</i>换站与固化</b><p><strong>坎：</strong>我跑通了，换个人不敢点、不会用。<br><strong>怎么说：</strong>做成别人不用问我也能跑的：填 4 个路径、先预检、我确认再执行。</p><em>产出：参数表 + Skill + exe + 12 条弯路清单</em></div>
+  </div>
+  <div class="ok">十步里最值钱的三条：<strong>先让它调查、给证据，再让它动手</strong>（2、4、8）　·　<strong>把「我不知道」变成问题清单，找能定规则的人定</strong>（3、8）　·　<strong>让它自己证伪：独立重算 + 逐字节比对</strong>（2、9）</div>
+
+  <h2><i>3</i>现在怎么用：五步</h2>
+  <div class="use">
+    <div class="u"><div class="n">1</div><b>填参数</b><span>4 个必填路径</span></div>
+    <div class="u"><div class="n">2</div><b>预检</b><span>只出报告，不写航线</span></div>
+    <div class="u"><div class="n">3</div><b>人工确认</b><span>核对 5 项</span></div>
+    <div class="u"><div class="n">4</div><b>正式执行</b><span>输出到新目录</span></div>
+    <div class="u"><div class="n">5</div><b>独立验收</b><span>12 项自动重算</span></div>
+  </div>
+
+  <div class="must">
+    <b>必填 4 项</b>：旧航线目录、旧→新映射表（CSV）、新台账（CSV）、输出目录（<b>必须不存在</b>）。
+    报告目录另外指定，且<b>不得位于输出目录内</b>。
+  </div>
+  <p style="font-size:14.5px;color:var(--ink2)">产物位置：<code>&lt;输出目录&gt;\</code>（7 个同名航线）　报告：<code>&lt;报告目录&gt;\</code>（预检报告、汇总、变更明细、异常清单、验收报告）</p>
+
+  <h2><i>4</i>三条红线（一定要守住）</h2>
+  <div class="cards">
+    <div class="c"><b>不猜</b><span>规则不确定的找研发确定；路径前缀段数推断不出就中止（退出码 1），不硬跑。</span></div>
+    <div class="c"><b>不动原件</b><span>输入只读；输出目录必须不存在；不许整体重新序列化，只做文本级定点替换。</span></div>
+    <div class="c"><b>不说假成功</b><span>查不到 / 一对多 / 空值一律保持旧值 + 记异常；异常点位不算失败，但必须逐条看得见。</span></div>
+  </div>
+
+  <h2><i>5</i>这个案例证明了两件事</h2>
+  <table>
+    <tr><th style="width:190px">结论</th><th>证据</th></tr>
+    <tr><td><strong>结果可信</strong></td><td>城南变 7 个航线：<strong>719/719</strong> 处引用更新成功、<strong>0 异常</strong>；白名单外字节差异 <strong>0</strong>；与历史交付 <strong>7/7 逐字节一致</strong>；独立验收 <strong>12 项全过</strong>（部件名 1439、keyID 790、坐标 1185、名称副本 678、sha256 9）。</td></tr>
+    <tr><td><strong>能够复用</strong></td><td>换站（220kV 都梁变，11 个航线 / 1001 个部件点 / 2002 处引用）只改参数文件即跑通：1940 成功、62 异常按设计保持旧值；命令行 / Agent 技能 / 界面三处共用<b>同一份引擎</b>，结果一致。</td></tr>
+  </table>
+
+  <h2><i>6</i>九条经验（换场景也适用）</h2>
+  <div class="chips">
+    <span><b>1</b> 需求写清单 + 禁止清单</span>
+    <span><b>2</b> 规则不确定找研发确定</span>
+    <span><b>3</b> 先把数据探到字节级</span>
+    <span><b>4</b> 参数与逻辑分离</span>
+    <span><b>5</b> 推断不出来就中止</span>
+    <span><b>6</b> 两阶段 + 人工确认</span>
+    <span><b>7</b> 每步立即校验，不靠退出码</span>
+    <span><b>8</b> 独立验收要换套算法重算</span>
+    <span><b>9</b> 界面只是外壳，逻辑只有一份</span>
+  </div>
+
+  <h2><i>7</i>命令速查（不影响日常使用）</h2>
+<pre><code>python update_ledger_generic.py --init-config 站参数.json     :: 生成参数模板（填 4 个路径）
+python update_ledger_generic.py -c 站参数.json --dry-run      :: 预检：只出报告，不写航线
+python update_ledger_generic.py -c 站参数.json --confirm      :: 正式执行（人工确认后）
+python route_ledger_tool.py verify --mapping 映射表.csv ...    :: 独立验收（--mapping 必填）</code></pre>
+
+  <h2><i>A</i>附录：遇到问题看这里</h2>
+  <details>
+    <summary>常见提示与处理</summary>
+    <div class="b">
+      <table>
+        <tr><th style="width:200px">现象</th><th>处理</th></tr>
+        <tr><td>预检报大量异常</td><td>先看是不是「一对多」（一台设备拆成几个新 ID）→ 补映射表或确认取哪个</td></tr>
+        <tr><td>部件名不对</td><td><code>full_path</code> 站级前缀段数 P 推错 → 用旧台账反推，或手工填 <code>path_prefix_depth</code></td></tr>
+        <tr><td>推断不出 P</td><td>程序退出码 1（设计行为）→ 三个补救：给旧台账、手工指定 P、检查台账格式</td></tr>
+        <tr><td>台账读成乱码</td><td>编码不是 UTF-8 → 引擎三段探测；仍失败时按报错里的表头手动指定</td></tr>
+        <tr><td>台账列无法识别</td><td>8 列 / 14 列自动判定；中文表头不在别名表里就显式指定列名</td></tr>
+        <tr><td>输出目录已存在 / 报告目录在输出目录内</td><td>换一个新的输出目录；报告目录必须与输出目录分开（否则下游会把报告当航线扫）</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary>本次走过的弯路（12 条，答疑用）</summary>
+    <div class="b">
+      <table>
+        <tr><th style="width:220px">弯路</th><th>最终处理</th></tr>
+        <tr><td>替换规则一开始不确定</td><td>规则不确定的找研发确定；定完逐条编号写成文字（1–10），再落成断言/异常码</td></tr>
+        <tr><td>名称副本口径反复</td><td>三档 <code>on</code>/<code>keyname</code>/<code>off</code>，v2.1 起默认 <code>on</code>；预检列出本站键分布供确认</td></tr>
+        <tr><td>术语绕回来三次</td><td>拍照点 = <code>additionalPartInfo</code>；名称副本 = <code>keyName</code>/<code>photoKeyName</code>（文档专设澄清）</td></tr>
+        <tr><td>差点整文件重排</td><td>实测空数组写法、17 位浮点全变 → 改用文本级定点替换</td></tr>
+        <tr><td>P 曾硬编码为 5</td><td>换站会静默算错分区名 → 改 auto 三依据推断 + 推断不出中止</td></tr>
+        <tr><td>GB18030 台账乱码</td><td>三段编码探测 + 报错打印表头</td></tr>
+        <tr><td>8 列 / 14 列并存</td><td>自动判定格式 + 列别名表 + 缺列走 W03</td></tr>
+        <tr><td>报告目录放进输出目录</td><td>强制校验「报告目录不得位于输出目录内」</td></tr>
+        <tr><td>一对多想「先取第一个」</td><td>会让 46 个点位静默变成错设备 → 保持旧值 + E03 + 清单</td></tr>
+        <tr><td>62 处异常被当失败</td><td>明确：异常点位保持旧值属设计行为，不计入失败</td></tr>
+        <tr><td>Skill 文档与工具参数不一致</td><td><code>verify</code> 的 <code>--mapping</code> 也必填 → 文档按实测更正，文档要随代码一起验</td></tr>
+        <tr><td>打包后无控制台输出</td><td>窗口模式 <code>sys.stdout</code> 为 None → 子进程入口重新封装</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary>成果包里有什么 / 想看完整过程</summary>
+    <div class="b">
+      <table>
+        <tr><th style="width:300px">目录 / 文件</th><th>用途</th></tr>
+        <tr><td><code>成果包\01-核心引擎与参数表</code></td><td>引擎 + 参数模板 + 通用方案 + 研发转换规则整理版 + 3 个一键 cmd</td></tr>
+        <tr><td><code>成果包\02-图形界面版</code></td><td><code>RouteLedgerTool.exe</code>（单文件，不装 Python）、源码、启动器、说明</td></tr>
+        <tr><td><code>成果包\03-Agent技能-station-route-ledger</code></td><td>Skill 文档 + 参考 + 脚本（让 Agent 一句话触发三阶段流程）</td></tr>
+        <tr><td><code>成果包\04-参数文件版与独立验收</code></td><td>参数文件驱动 + 一键更新 + 独立验收（自带引擎，自包含）</td></tr>
+        <tr><td><code>成果包\05-示例数据与参考成果</code></td><td>城南变示例输入 + 参考报告、都梁变换站案例（现场演练用）</td></tr>
+        <tr><td><code>成果包\06-培训材料\案例复盘-一步一步做出来的十步.md</code></td><td><b>完整讲稿</b>：每步写清「做什么 → 碰到什么坎 → 我怎么跟 Agent 说 → 它做了什么 → 结果与证据 → 学到什么」</td></tr>
+        <tr><td><code>成果包\06-培训材料\一页纸方法.md</code></td><td>一页纸版：10 卡点表 + 三条 + 三禁止 + 验收四问 + 开场提示词</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <footer>
+    完整版（八步搭建法、字段公式、异常码表、12 项验收清单、命令速查）：<code>培训材料.md</code> / <code>培训材料.html</code><br>
+    本文件与根目录 <code>培训材料.md/html</code> 同源；案例一模板：《LiPowerline_Agent_工具搭建培训案例》三工况净空批处理。
+  </footer>
+
+</div>
+</body>
+</html>
